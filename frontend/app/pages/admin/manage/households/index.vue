@@ -2,6 +2,7 @@
   <v-container fluid>
     <BaseDialog
       v-model="createDialog"
+      bottom-sheet
       :title="$t('household.create-household')"
       :icon="$globals.icons.household"
     >
@@ -28,6 +29,7 @@
       <template #custom-card-action>
         <BaseButton
           type="submit"
+          class="flex-1-1-0"
           @click="handleCreateSubmit"
         >
           {{ $t("general.create") }}
@@ -37,6 +39,7 @@
 
     <BaseDialog
       v-model="confirmDialog"
+      bottom-sheet
       :title="$t('general.confirm')"
       :icon="$globals.icons.alertCircle"
       color="error"

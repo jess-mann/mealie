@@ -4,6 +4,7 @@
       <!-- Delete Dialog -->
       <BaseDialog
         v-model="state.deleteDialog"
+        bottom-sheet
         :title="$t('settings.backup.delete-backup')"
         color="error"
         :icon="$globals.icons.alertCircle"
@@ -18,6 +19,7 @@
       <!-- Import Dialog -->
       <BaseDialog
         v-model="state.importDialog"
+        bottom-sheet
         color="error"
         :title="$t('settings.backup.backup-restore')"
         :icon="$globals.icons.database"
@@ -47,9 +49,10 @@
             :label="$t('settings.backup.irreversible-acknowledgment')"
           />
         </v-card-text>
-        <v-card-actions class="justify-center pt-0">
+        <template #custom-card-action>
           <BaseButton
             delete
+            class="flex-1-1-0"
             :disabled="!state.confirmImport || state.runningRestore"
             @click="restoreBackup(selected)"
           >
@@ -58,7 +61,7 @@
             </template>
             {{ $t('settings.backup.restore-backup') }}
           </BaseButton>
-        </v-card-actions>
+        </template>
         <p class="caption pb-0 mb-1 text-center">
           {{ selected }}
         </p>
