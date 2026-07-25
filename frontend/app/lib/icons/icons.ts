@@ -160,6 +160,8 @@ import {
   mdiWindowClose,
   mdiWrench,
   mdiHandWaveOutline,
+  mdiCalendarRemove,
+  mdiCalendarEdit,
 
 } from "@mdi/js";
 
@@ -191,6 +193,8 @@ export const icons = {
   bullhornVariant: mdiBullhornVariant,
   calendar: mdiCalendar,
   calendarMinus: mdiCalendarMinus,
+  calendarRemove: mdiCalendarRemove,
+  calendarEdit: mdiCalendarEdit,
   calendarMultiselect: mdiCalendarMultiselect,
   calendarToday: mdiCalendarToday,
   calendarWeek: mdiCalendarWeek,
