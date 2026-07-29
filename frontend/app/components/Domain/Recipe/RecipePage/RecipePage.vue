@@ -208,36 +208,36 @@
 </template>
 
 <script setup lang="ts">
-import type { ComponentPublicInstance } from "vue";
 import { invoke, until } from "@vueuse/core";
+import type { ComponentPublicInstance } from "vue";
 import type { RouteLocationNormalized } from "vue-router";
-import RecipeIngredients from "../RecipeIngredients.vue";
-import RecipePageEditorToolbar from "./RecipePageParts/RecipePageEditorToolbar.vue";
-import RecipePageFooter from "./RecipePageParts/RecipePageFooter.vue";
-import RecipePageHeader from "./RecipePageParts/RecipePageHeader.vue";
-import RecipePageIngredientEditor from "./RecipePageParts/RecipePageIngredientEditor.vue";
-import RecipePageIngredientToolsView from "./RecipePageParts/RecipePageIngredientToolsView.vue";
-import RecipePageInstructions from "./RecipePageParts/RecipePageInstructions.vue";
-import RecipePageOrganizers from "./RecipePageParts/RecipePageOrganizers.vue";
-import RecipePageParseDialog from "./RecipePageParts/RecipeParseDialog/RecipePageParseDialog.vue";
-import RecipePageScale from "./RecipePageParts/RecipePageScale.vue";
-import RecipePageInfoEditor from "./RecipePageParts/RecipePageInfoEditor.vue";
-import RecipePageComments from "./RecipePageParts/RecipePageComments.vue";
+import RecipeDialogBulkAdd from "~/components/Domain/Recipe/RecipeDialogBulkAdd.vue";
+import RecipeNotes from "~/components/Domain/Recipe/RecipeNotes.vue";
 import RecipePrintContainer from "~/components/Domain/Recipe/RecipePrintContainer.vue";
+import { useUserApi } from "~/composables/api";
 import {
   clearPageState,
   PageMode,
   usePageState,
 } from "~/composables/recipe-page/shared-state";
-import type { NoUndefinedField } from "~/lib/api/types/non-generated";
-import type { Recipe, RecipeCategory, RecipeIngredient, RecipeTag, RecipeTool } from "~/lib/api/types/recipe";
-import { useRouteQuery } from "~/composables/use-router";
-import { useUserApi } from "~/composables/api";
-import { uuid4, deepCopy } from "~/composables/use-utils";
-import RecipeDialogBulkAdd from "~/components/Domain/Recipe/RecipeDialogBulkAdd.vue";
-import RecipeNotes from "~/components/Domain/Recipe/RecipeNotes.vue";
 import { useLoggedInState } from "~/composables/use-logged-in-state";
 import { useNavigationWarning } from "~/composables/use-navigation-warning";
+import { useRouteQuery } from "~/composables/use-router";
+import { deepCopy, uuid4 } from "~/composables/use-utils";
+import type { NoUndefinedField } from "~/lib/api/types/non-generated";
+import type { Recipe, RecipeCategory, RecipeIngredient, RecipeTag, RecipeTool } from "~/lib/api/types/recipe";
+import RecipeIngredients from "../RecipeIngredients.vue";
+import RecipePageComments from "./RecipePageParts/RecipePageComments.vue";
+import RecipePageEditorToolbar from "./RecipePageParts/RecipePageEditorToolbar.vue";
+import RecipePageFooter from "./RecipePageParts/RecipePageFooter.vue";
+import RecipePageHeader from "./RecipePageParts/RecipePageHeader.vue";
+import RecipePageInfoEditor from "./RecipePageParts/RecipePageInfoEditor.vue";
+import RecipePageIngredientEditor from "./RecipePageParts/RecipePageIngredientEditor.vue";
+import RecipePageIngredientToolsView from "./RecipePageParts/RecipePageIngredientToolsView.vue";
+import RecipePageInstructions from "./RecipePageParts/RecipePageInstructions.vue";
+import RecipePageOrganizers from "./RecipePageParts/RecipePageOrganizers.vue";
+import RecipePageScale from "./RecipePageParts/RecipePageScale.vue";
+import RecipePageParseDialog from "./RecipePageParts/RecipeParseDialog/RecipePageParseDialog.vue";
 
 const recipe = defineModel<NoUndefinedField<Recipe>>({ required: true });
 
@@ -416,9 +416,13 @@ async function saveRecipe() {
 }
 
 async function saveParsedIngredients(ingredients: NoUndefinedField<RecipeIngredient[]>) {
+  const returnToEdit = isEditMode.value;
   recipe.value.recipeIngredient = ingredients;
   await saveRecipe();
   toggleIsParsing(false);
+  if (returnToEdit) {
+    setMode(PageMode.EDIT);
+  }
 }
 
 async function deleteRecipe() {
