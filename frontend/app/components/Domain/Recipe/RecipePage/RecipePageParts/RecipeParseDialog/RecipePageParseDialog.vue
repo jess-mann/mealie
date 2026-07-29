@@ -27,56 +27,14 @@
         @alias-unit="addMissingUnitAsAlias"
         @alias-food="addMissingFoodAsAlias"
       />
-      <div v-else class="d-flex flex-column ga-4">
-        <ParseDialogChangeParser
-          v-model="parser"
-          :available-parsers="availableParsers"
-          @parse="parseIngredients"
-        />
-        <div>
-          <v-card-title class="text-center pt-0 pb-8">
-            {{ $t("recipe.parser.review-parsed-ingredients") }}
-          </v-card-title>
-          <v-card-text style="max-height: 60vh; overflow-y: auto;">
-            <VueDraggable
-              v-model="parsedIngs"
-              handle=".handle"
-              :delay="250"
-              :delay-on-touch-only="true"
-              v-bind="{
-                animation: 200,
-                group: 'recipe-ingredients',
-                disabled: false,
-                ghostClass: 'ghost',
-              }"
-              class="px-6"
-              @start="drag = true"
-              @end="drag = false"
-            >
-              <TransitionGroup type="transition">
-                <v-lazy v-for="(ingredient, index) in parsedIngs" :key="index">
-                  <RecipeIngredientEditor
-                    v-model="ingredient.ingredient"
-                    enable-drag-handle
-                    enable-context-menu
-                    class="list-group-item pb-8"
-                    :delete-disabled="parsedIngs.length <= 1"
-                    @delete="parsedIngs.splice(index, 1)"
-                    @insert-above="insertNewIngredient(index)"
-                    @insert-below="insertNewIngredient(index + 1)"
-                  >
-                    <template #before-divider>
-                      <p v-if="ingredient.input" class="py-0 my-0 text-caption">
-                        {{ $t("recipe.original-text-with-value", { originalText: ingredient.input }) }}
-                      </p>
-                    </template>
-                  </RecipeIngredientEditor>
-                </v-lazy>
-              </TransitionGroup>
-            </VueDraggable>
-          </v-card-text>
-        </div>
-      </div>
+      <ParseDialogReview
+        v-else
+        v-model="parsedIngs"
+        :available-parsers="availableParsers"
+        :parser="parser"
+        @parse="parseIngredients"
+        @change-parser="(newParser) => parser = newParser"
+      />
     </v-container>
     <template v-if="state.step !== ParseStep.LOADING" #custom-card-action>
       <SpinTransition>
@@ -110,7 +68,6 @@
 </template>
 
 <script setup lang="ts">
-import { VueDraggable } from "vue-draggable-plus";
 import { useUserApi } from "~/composables/api";
 import { useIngredientTextParser } from "~/composables/recipes";
 import { useFoodData, useFoodStore, useUnitData, useUnitStore } from "~/composables/store";
@@ -143,7 +100,6 @@ const emit = defineEmits<{
 const { group } = useGroupSelf();
 const i18n = useI18n();
 const api = useUserApi();
-const drag = ref(false);
 
 const unitStore = useUnitStore();
 const unitData = useUnitData();
@@ -193,7 +149,6 @@ const state = reactive({
 });
 
 function nextStep() {
-  // TODO MLM: change to info/parse/review as necessary
   state.step = getNextStep(state.step);
 }
 
@@ -320,6 +275,7 @@ async function parseIngredients() {
     return;
   }
   state.step = ParseStep.LOADING;
+  state.saveLoading = false;
   try {
     const filteredIngredients = props.ingredients.filter(ing => !ing.referencedRecipe);
     const ingsAsString = filteredIngredients.map(ing => ingredientToParserString(ing));
