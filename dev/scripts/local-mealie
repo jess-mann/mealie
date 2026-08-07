@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/../.." && pwd)"
+cd "$repo_root"
+
+compose_file="${COMPOSE_FILE:-docker-compose.yml}"
+service="${MEALIE_COMPOSE_SERVICE:-mealie}"
+image="${MEALIE_IMAGE:-jess-mealie:pantry}"
+
+git_commit="$(git rev-parse HEAD)"
+git_short_commit="$(git rev-parse --short=12 HEAD)"
+git_branch="$(git branch --show-current)"
+if [[ -z "$git_branch" ]]; then
+  git_branch="detached"
+fi
+
+dirty_suffix=""
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  dirty_suffix="-dirty"
+fi
+
+export DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
+export COMPOSE_DOCKER_CLI_BUILD="${COMPOSE_DOCKER_CLI_BUILD:-1}"
+export MEALIE_IMAGE="$image"
+export MEALIE_GIT_COMMIT="$git_commit"
+export MEALIE_GIT_BRANCH="$git_branch"
+export MEALIE_BUILD_DATE="${MEALIE_BUILD_DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+export MEALIE_IMAGE_VERSION="${MEALIE_IMAGE_VERSION:-${git_branch}-${git_short_commit}${dirty_suffix}}"
+
+usage() {
+  cat <<EOF
+Usage: dev/scripts/local-mealie [command]
+
+Commands:
+  up       Build with BuildKit and recreate the local Mealie container (default)
+  build    Build the local image only
+  restart  Recreate the local Mealie container without rebuilding
+  stop     Stop the local Mealie container
+  down     Stop and remove the local Mealie container
+  status   Show local Mealie compose status
+  logs     Follow local Mealie logs
+
+Environment:
+  MEALIE_IMAGE             Image tag to build/run (default: jess-mealie:pantry)
+  MEALIE_HOST_PORT         Host port exposed by compose (default: 9925)
+  COMPOSE_FILE             Compose file to use (default: docker-compose.yml)
+EOF
+}
+
+remove_legacy_container() {
+  local existing_id
+  existing_id="$(docker ps -aq --filter "name=^/${service}$")"
+  if [[ -n "$existing_id" ]]; then
+    docker rm -f "$service" >/dev/null
+  fi
+}
+
+command="${1:-up}"
+shift || true
+
+case "$command" in
+  up)
+    remove_legacy_container
+    docker compose -f "$compose_file" up -d --build --force-recreate "$service" "$@"
+    docker compose -f "$compose_file" ps "$service"
+    ;;
+  build)
+    docker compose -f "$compose_file" build "$service" "$@"
+    ;;
+  restart)
+    remove_legacy_container
+    docker compose -f "$compose_file" up -d --force-recreate "$service" "$@"
+    docker compose -f "$compose_file" ps "$service"
+    ;;
+  stop)
+    docker compose -f "$compose_file" stop "$service" "$@"
+    ;;
+  down)
+    docker compose -f "$compose_file" down "$@"
+    ;;
+  status)
+    docker compose -f "$compose_file" ps "$service" "$@"
+    ;;
+  logs)
+    docker compose -f "$compose_file" logs -f "$service" "$@"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $command" >&2
+    usage >&2
+    exit 64
+    ;;
+esac

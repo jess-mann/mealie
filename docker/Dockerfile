@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 ###############################################
 # Frontend Build
 ###############################################
@@ -6,15 +8,18 @@ FROM node:24@sha256:5711a0d445a1af54af9589066c646df387d1831a608226f4cd694fc59e74
 
 WORKDIR /frontend
 
-COPY frontend .
+COPY frontend/package.json frontend/yarn.lock ./
 
-RUN yarn install \
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn/v6 \
+    yarn install \
     --prefer-offline \
     --frozen-lockfile \
     --non-interactive \
     --production=false \
     # https://github.com/docker/build-push-action/issues/471
     --network-timeout 1000000
+
+COPY frontend .
 
 RUN yarn generate
 
@@ -45,12 +50,15 @@ RUN useradd -u 911 -U -d $MEALIE_HOME -s /bin/bash abc \
 # Backend Package Build
 ###############################################
 FROM python-base AS backend-builder
-RUN apt-get update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+    && apt-get update \
     && apt-get install --no-install-recommends -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    curl
 
-RUN pip install uv
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install uv
 
 # Install from the committed lockfile; never re-resolve. The rolling
 # `exclude-newer` cooling window (pyproject [tool.uv]) would otherwise make
@@ -59,25 +67,20 @@ ENV UV_FROZEN=1
 
 WORKDIR /mealie
 
-# copy project files here to ensure they will be cached.
+# Export pinned third-party dependencies before copying app/frontend code so this
+# layer stays cached when only the Mealie wheel contents change.
 COPY uv.lock pyproject.toml ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv export --no-editable --no-emit-project --extra pgsql --format requirements-txt --output-file dist/requirements.txt
+
 COPY mealie ./mealie
 
 # Copy frontend to package it into the wheel
 COPY --from=frontend-builder /frontend/dist ./mealie/frontend
 
 # Build the source and binary package
-RUN uv build --out-dir dist
-
-# Create the requirements file, which is used to install the built package and
-# its pinned dependencies later. mealie is included to ensure the built one is
-# what's installed.
-RUN uv export --no-editable --no-emit-project --extra pgsql --format requirements-txt --output-file dist/requirements.txt \
-    && MEALIE_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])") \
-    && echo "mealie[pgsql]==${MEALIE_VERSION} \\" >> dist/requirements.txt \
-    && pip hash dist/mealie-${MEALIE_VERSION}-py3-none-any.whl | tail -n1 | tr -d '\n' >> dist/requirements.txt \
-    && echo " \\" >> dist/requirements.txt \
-    && pip hash dist/mealie-${MEALIE_VERSION}.tar.gz | tail -n1 >> dist/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv build --out-dir dist
 
 ###############################################
 # Package Container
@@ -91,7 +94,10 @@ COPY --from=backend-builder /mealie/dist /
 ###############################################
 # Install packages required to build the venv, in parallel to building the wheel
 FROM python-base AS venv-builder-base
-RUN apt-get update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+    && apt-get update \
     && apt-get install --no-install-recommends -y \
     build-essential \
     libpq-dev \
@@ -99,19 +105,26 @@ RUN apt-get update \
     ffmpeg \
     # LDAP Dependencies
     libsasl2-dev libldap2-dev libssl-dev \
-    gnupg gnupg2 gnupg1 \
-    && rm -rf /var/lib/apt/lists/*
-RUN python3 -m venv --upgrade-deps $VENV_PATH
+    gnupg gnupg2 gnupg1
+RUN --mount=type=cache,target=/root/.cache/pip \
+    python3 -m venv --upgrade-deps $VENV_PATH
 
 # Install the wheel and all dependencies into the venv
 FROM venv-builder-base AS venv-builder
 
-# Copy built package (wheel) and its dependency requirements
-COPY --from=packages * /dist/
+# Copy only third-party dependency requirements first so the expensive install
+# layer does not depend on the freshly built Mealie wheel hash.
+COPY --from=packages /requirements.txt /dist/requirements.txt
 
-# Install the wheel with exact versions of dependencies into the venv
+# Install exact third-party dependencies, then install the freshly built Mealie
+# wheel without dependencies in a small layer that changes with app/frontend code.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    . $VENV_PATH/bin/activate \
+    && pip install --require-hashes -r /dist/requirements.txt
+
+COPY --from=packages /mealie-*.whl /dist/
 RUN . $VENV_PATH/bin/activate \
-    && pip install --require-hashes -r /dist/requirements.txt --find-links /dist
+    && pip install --no-deps /dist/mealie-*.whl
 
 ###############################################
 # Production Image
@@ -121,10 +134,10 @@ ENV PRODUCTION=true
 ENV TESTING=false
 ENV HOME=/app/data
 
-ARG COMMIT
-ENV GIT_COMMIT_HASH=$COMMIT
-
-RUN apt-get update \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean \
+    && apt-get update \
     && apt-get install --no-install-recommends -y \
     curl \
     ffmpeg \
@@ -132,8 +145,7 @@ RUN apt-get update \
     iproute2 \
     libldap-common \
     libldap2 \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+    unzip
 
 # create directory used for Docker Secrets
 RUN mkdir -p /run/secrets
@@ -161,4 +173,15 @@ EXPOSE ${APP_PORT}
 COPY ./docker/entry.sh $MEALIE_HOME/run.sh
 
 RUN chmod +x $MEALIE_HOME/run.sh
+ARG COMMIT
+ARG GIT_BRANCH=unknown
+ARG BUILD_DATE=unknown
+ARG VERSION=local
+ENV GIT_COMMIT_HASH=$COMMIT
+LABEL org.opencontainers.image.title="Mealie" \
+    org.opencontainers.image.description="Local Jess Mealie build" \
+    org.opencontainers.image.revision=$COMMIT \
+    org.opencontainers.image.ref.name=$GIT_BRANCH \
+    org.opencontainers.image.version=$VERSION \
+    org.opencontainers.image.created=$BUILD_DATE
 ENTRYPOINT ["/app/run.sh"]
