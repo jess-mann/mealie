@@ -998,6 +998,7 @@
     "item-checked-off": "Checked off {item}"
   },
   "pantry": {
+    "add-price": "Add Price",
     "add-item": "Add Item",
     "all-items": "All Items",
     "barcode": "Barcode",
@@ -1019,6 +1020,7 @@
     "item-deleted": "Pantry item deleted",
     "item-name": "Item Name",
     "item-updated": "Pantry item updated",
+    "items": "Items",
     "location": "Location",
     "log-update": "Log Update",
     "lookup-barcode": "Look Up Barcode",
@@ -1026,6 +1028,7 @@
     "manufacturer": "Manufacturer",
     "no-items": "No pantry items found",
     "no-history": "No pantry history yet",
+    "no-prices": "No prices yet",
     "notes": "Notes",
     "nutrition-facts": "Nutrition Facts",
     "opened-date": "Opened Date",
