@@ -72,6 +72,7 @@
       <BaseButton
         v-if="newAnnouncements.length"
         color="success"
+        class="flex-1-1-0"
         :icon="$globals.icons.textBoxCheckOutline"
         :text="$t('announcements.mark-all-as-read')"
         @click="markAllAsRead"
@@ -79,6 +80,7 @@
       <BaseButton
         :disabled="isLastAnnouncement(currentAnnouncement.key)"
         color="info"
+        class="flex-1-1-0"
         :icon="$globals.icons.arrowRightBold"
         icon-right
         :text="$t('general.next')"

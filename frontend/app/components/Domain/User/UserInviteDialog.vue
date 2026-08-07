@@ -62,6 +62,7 @@
     </v-container>
     <template #custom-card-action>
       <BaseButton
+        class="flex-1-1-0"
         :disabled="!validEmail"
         :loading="loading"
         :icon="$globals.icons.email"
