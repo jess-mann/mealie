@@ -9,11 +9,11 @@
       max-width="600px"
       max-height="40%"
     >
-      <v-card-text class="pt-4">
-        <p>
-          {{ activeText }}
-        </p>
+      <div class="sticky bg-surface pt-4 px-4">
+        {{ activeText }}
         <v-divider class="my-4" />
+      </div>
+      <v-card-text class="pt-4">
         <template v-if="Object.keys(groupedUnusedIngredients).length > 0">
           <h4 class="ml-1">
             {{ $t("recipe.unlinked") }}
@@ -796,6 +796,14 @@ function openImageUpload(index: number) {
 </script>
 
 <style lang="css" scoped>
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  max-height: 40dvh;
+  overflow: scroll;
+}
+
 .v-card--link:before {
   background: none;
 }
