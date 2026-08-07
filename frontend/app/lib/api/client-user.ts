@@ -20,6 +20,7 @@ import { ToolsApi } from "./user/organizer-tools";
 import { GroupMigrationApi } from "./user/group-migrations";
 import { GroupReportsApi } from "./user/group-reports";
 import { PantryApi } from "./user/group-pantry";
+import { ReceiptsApi } from "./user/group-receipts";
 import { ShoppingApi } from "./user/group-shopping-lists";
 import { MultiPurposeLabelsApi } from "./user/group-multiple-purpose-labels";
 import { GroupEventNotifierApi } from "./user/group-event-notifier";
@@ -50,6 +51,7 @@ export class UserApiClient {
   public groupMigration: GroupMigrationApi;
   public groupReports: GroupReportsApi;
   public pantry: PantryApi;
+  public receipts: ReceiptsApi;
   public tools: ToolsApi;
   public shopping: ShoppingApi;
   public multiPurposeLabels: MultiPurposeLabelsApi;
@@ -82,6 +84,7 @@ export class UserApiClient {
     this.groupMigration = new GroupMigrationApi(requests);
     this.groupReports = new GroupReportsApi(requests);
     this.pantry = new PantryApi(requests);
+    this.receipts = new ReceiptsApi(requests);
     this.shopping = new ShoppingApi(requests);
     this.multiPurposeLabels = new MultiPurposeLabelsApi(requests);
     this.seeders = new GroupDataSeederApi(requests);

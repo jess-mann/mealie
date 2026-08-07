@@ -249,6 +249,12 @@ const topLinks = computed<SideBarLink[]>(() => [
     restricted: true,
   },
   {
+    icon: $globals.icons.receipt,
+    title: i18n.t("receipts.receipts"),
+    to: "/receipts",
+    restricted: true,
+  },
+  {
     icon: $globals.icons.fileCabinet,
     title: i18n.t("pantry.pantry"),
     to: "/pantry",

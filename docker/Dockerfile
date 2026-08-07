@@ -132,6 +132,7 @@ RUN . $VENV_PATH/bin/activate \
 FROM python-base AS production
 ENV PRODUCTION=true
 ENV TESTING=false
+ENV HOME=/app/data
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \

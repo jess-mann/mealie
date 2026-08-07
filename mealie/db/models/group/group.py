@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from ..household import Household
     from ..household.events import GroupEventNotifierModel
     from ..household.pantry import PantryItem
+    from ..household.receipt import Receipt
     from ..household.recipe_action import GroupRecipeAction
     from ..household.shopping_list import ShoppingList
     from ..recipe import IngredientFoodModel, IngredientUnitModel, RecipeModel, Tag, Tool
@@ -82,6 +83,7 @@ class Group(SqlAlchemyBase, BaseMixins):
     data_exports: Mapped[list["GroupDataExportsModel"]] = orm.relationship("GroupDataExportsModel", **common_args)
     shopping_lists: Mapped[list["ShoppingList"]] = orm.relationship("ShoppingList", **common_args)
     pantry_items: Mapped[list["PantryItem"]] = orm.relationship("PantryItem", **common_args)
+    receipts: Mapped[list["Receipt"]] = orm.relationship("Receipt", **common_args)
     group_reports: Mapped[list["ReportModel"]] = orm.relationship("ReportModel", **common_args)
     group_event_notifiers: Mapped[list["GroupEventNotifierModel"]] = orm.relationship(
         "GroupEventNotifierModel", **common_args
@@ -100,6 +102,7 @@ class Group(SqlAlchemyBase, BaseMixins):
             "recipe_actions",
             "shopping_lists",
             "pantry_items",
+            "receipts",
             "cookbooks",
             "preferences",
             "ai_provider_settings",
