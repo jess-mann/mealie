@@ -67,6 +67,7 @@ from .household_preferences import (
 )
 from .household_statistics import HouseholdStatistics
 from .invite_token import CreateInviteToken, EmailInitationResponse, EmailInvitation, ReadInviteToken, SaveInviteToken
+from .pantry import PantryItemCreate, PantryItemOut, PantryItemPagination, PantryItemSave, PantryItemUpdate
 from .webhook import CreateWebhook, ReadWebhook, SaveWebhook, WebhookPagination, WebhookType
 
 __all__ = [
@@ -89,6 +90,11 @@ __all__ = [
     "GroupEventNotifierUpdate",
     "GroupEventPagination",
     "HouseholdStatistics",
+    "PantryItemCreate",
+    "PantryItemOut",
+    "PantryItemPagination",
+    "PantryItemSave",
+    "PantryItemUpdate",
     "ShoppingListAddRecipeParams",
     "ShoppingListAddRecipeParamsBulk",
     "ShoppingListCreate",
