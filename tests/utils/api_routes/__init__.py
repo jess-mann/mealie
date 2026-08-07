@@ -99,6 +99,8 @@ households_mealplans_today = "/api/households/mealplans/today"
 """`/api/households/mealplans/today`"""
 households_members = "/api/households/members"
 """`/api/households/members`"""
+households_receipts = "/api/households/receipts"
+"""`/api/households/receipts`"""
 households_permissions = "/api/households/permissions"
 """`/api/households/permissions`"""
 households_preferences = "/api/households/preferences"
@@ -380,6 +382,16 @@ def households_mealplans_item_id(item_id):
 def households_mealplans_rules_item_id(item_id):
     """`/api/households/mealplans/rules/{item_id}`"""
     return f"{prefix}/households/mealplans/rules/{item_id}"
+
+
+def households_receipts_receipt_id(receipt_id):
+    """`/api/households/receipts/{receipt_id}`"""
+    return f"{prefix}/households/receipts/{receipt_id}"
+
+
+def households_receipts_receipt_id_image(receipt_id):
+    """`/api/households/receipts/{receipt_id}/image`"""
+    return f"{prefix}/households/receipts/{receipt_id}/image"
 
 
 def households_recipe_actions_item_id(item_id):

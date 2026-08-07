@@ -67,6 +67,15 @@ from .household_preferences import (
 )
 from .household_statistics import HouseholdStatistics
 from .invite_token import CreateInviteToken, EmailInitationResponse, EmailInvitation, ReadInviteToken, SaveInviteToken
+from .receipt import (
+    ReceiptCreate,
+    ReceiptLineItemCreate,
+    ReceiptLineItemOut,
+    ReceiptOut,
+    ReceiptPagination,
+    ReceiptSave,
+    ReceiptUpdate,
+)
 from .webhook import CreateWebhook, ReadWebhook, SaveWebhook, WebhookPagination, WebhookType
 
 __all__ = [
@@ -89,6 +98,13 @@ __all__ = [
     "GroupEventNotifierUpdate",
     "GroupEventPagination",
     "HouseholdStatistics",
+    "ReceiptCreate",
+    "ReceiptLineItemCreate",
+    "ReceiptLineItemOut",
+    "ReceiptOut",
+    "ReceiptPagination",
+    "ReceiptSave",
+    "ReceiptUpdate",
     "ShoppingListAddRecipeParams",
     "ShoppingListAddRecipeParamsBulk",
     "ShoppingListCreate",

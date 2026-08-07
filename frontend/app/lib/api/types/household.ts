@@ -9,6 +9,68 @@ export type GroupRecipeActionType = "link" | "post";
 export type UnitSystem = "original" | "metric" | "imperial" | "us";
 export type WebhookType = "mealplan";
 
+export interface ReceiptLineItemCreate {
+  rawText?: string | null;
+  name: string;
+  quantity?: number | null;
+  unitText?: string | null;
+  unitPrice?: string | number | null;
+  totalPrice: string | number;
+  discount?: string | number | null;
+  productCode?: string | null;
+  category?: string | null;
+  confidence?: number | null;
+  notes?: string | null;
+}
+
+export interface ReceiptLineItemOut extends ReceiptLineItemCreate {
+  id: string;
+  groupId: string;
+  householdId: string;
+  receiptId: string;
+  position: number;
+  unitPrice?: string | null;
+  totalPrice: string;
+  discount?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface ReceiptCreate {
+  merchantName: string;
+  purchasedAt?: string | null;
+  receiptDate?: string | null;
+  subtotal?: string | number | null;
+  tax?: string | number | null;
+  total?: string | number | null;
+  currency?: string;
+  status?: string;
+  imageUrl?: string | null;
+  imageFilename?: string | null;
+  rawText?: string | null;
+  ocrText?: string | null;
+  ocrStatus?: string | null;
+  ocrEngine?: string | null;
+  parserName?: string | null;
+  parserVersion?: string | null;
+  parserOutput?: string | null;
+  parserWarnings?: string | null;
+  notes?: string | null;
+  items?: ReceiptLineItemCreate[];
+}
+
+export interface ReceiptUpdate extends ReceiptCreate {
+  id: string;
+  groupId: string;
+  householdId: string;
+}
+
+export interface ReceiptOut extends ReceiptUpdate {
+  items: ReceiptLineItemOut[];
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface CreateGroupRecipeAction {
   actionType: GroupRecipeActionType;
   title: string;
