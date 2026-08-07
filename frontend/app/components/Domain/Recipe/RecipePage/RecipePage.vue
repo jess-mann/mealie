@@ -60,7 +60,7 @@
             <RecipePageIngredientEditor v-if="isEditForm" v-model="recipe" />
           </div>
           <div>
-            <RecipePageScale v-model="scale" :recipe="recipe" />
+            <RecipePageScale v-model:scale="scale" v-model:unit-system="unitSystem" :recipe="recipe" />
           </div>
 
           <!--
@@ -77,7 +77,7 @@
               md="4"
               :class="$vuetify.display.mdAndUp ? 'border-e-thin' : null"
             >
-              <RecipePageIngredientToolsView v-if="!isEditForm" :recipe="recipe" :scale="scale" class="pr-2" />
+              <RecipePageIngredientToolsView v-if="!isEditForm" :recipe="displayedRecipe" :scale="scale" class="pr-2" />
               <RecipePageOrganizers v-if="$vuetify.display.mdAndUp" v-model="recipe" class="pr-2" @item-selected="chipClicked" />
             </v-col>
             <!--
@@ -86,9 +86,9 @@
             -->
             <v-col cols="12" sm="12" :md="8 + (isCookMode ? 1 : 0) * 4">
               <RecipePageInstructions
-                v-model="recipe.recipeInstructions"
+                v-model="instructionsVModel"
                 v-model:assets="recipe.assets"
-                :recipe="recipe"
+                :recipe="displayedRecipe"
                 :scale="scale"
               />
               <div v-if="isEditForm" class="d-flex">
@@ -112,7 +112,7 @@
         v-model="recipe"
         class="px-1 my-4 d-print-none"
       />
-      <RecipePrintContainer :recipe="recipe" :scale="scale" />
+      <RecipePrintContainer :recipe="displayedRecipe" :scale="scale" />
     </v-container>
     <!-- Floating save button when toolbar scrolls out of view -->
     <v-fab
@@ -142,11 +142,11 @@
       <v-row style="height: 100%" no-gutters class="overflow-hidden">
         <v-col cols="12" sm="5" class="overflow-y-auto pl-4 pr-3 py-2" style="height: 100%">
           <div class="d-flex align-center">
-            <RecipePageScale v-model="scale" :recipe="recipe" />
+            <RecipePageScale v-model:scale="scale" v-model:unit-system="unitSystem" :recipe="recipe" />
           </div>
           <RecipePageIngredientToolsView
             v-if="!isEditForm"
-            :recipe="recipe"
+            :recipe="displayedRecipe"
             :scale="scale"
             :is-cook-mode="isCookMode"
           />
@@ -163,10 +163,10 @@
             {{ $t('recipe.instructions') }}
           </h2>
           <RecipePageInstructions
-            v-model="recipe.recipeInstructions"
+            v-model="instructionsVModel"
             v-model:assets="recipe.assets"
             class="overflow-y-hidden px-4"
-            :recipe="recipe"
+            :recipe="displayedRecipe"
             :scale="scale"
           />
         </v-col>
@@ -174,13 +174,13 @@
     </v-sheet>
     <v-sheet v-show="isCookMode && hasLinkedIngredients">
       <div class="mt-2 px-2 px-md-4">
-        <RecipePageScale v-model="scale" :recipe="recipe" />
+        <RecipePageScale v-model:scale="scale" v-model:unit-system="unitSystem" :recipe="recipe" />
       </div>
       <RecipePageInstructions
-        v-model="recipe.recipeInstructions"
+        v-model="instructionsVModel"
         v-model:assets="recipe.assets"
         class="overflow-y-hidden mt-n5 px-2 px-md-4"
-        :recipe="recipe"
+        :recipe="displayedRecipe"
         :scale="scale"
       />
 
@@ -221,12 +221,14 @@ import {
   PageMode,
   usePageState,
 } from "~/composables/recipe-page/shared-state";
+import { useUnitSystem } from "~/composables/recipes/use-unit-system";
 import { useLoggedInState } from "~/composables/use-logged-in-state";
 import { useNavigationWarning } from "~/composables/use-navigation-warning";
 import { useRouteQuery } from "~/composables/use-router";
 import { deepCopy, uuid4 } from "~/composables/use-utils";
 import type { NoUndefinedField } from "~/lib/api/types/non-generated";
-import type { Recipe, RecipeCategory, RecipeIngredient, RecipeTag, RecipeTool } from "~/lib/api/types/recipe";
+import type { Recipe, RecipeCategory, RecipeConversionResponse, RecipeIngredient, RecipeStep, RecipeTag, RecipeTool } from "~/lib/api/types/recipe";
+import type { UnitSystem } from "~/lib/api/types/user";
 import RecipeIngredients from "../RecipeIngredients.vue";
 import RecipePageComments from "./RecipePageParts/RecipePageComments.vue";
 import RecipePageEditorToolbar from "./RecipePageParts/RecipePageEditorToolbar.vue";
@@ -255,8 +257,8 @@ const { setMode, isEditForm, isEditJSON, isCookMode, isEditMode, isParsing, togg
   = usePageState(recipe.value.slug);
 const { deactivateNavigationWarning } = useNavigationWarning();
 const notLinkedIngredients = computed(() => {
-  return recipe.value.recipeIngredient.filter((ingredient) => {
-    return !recipe.value.recipeInstructions.some(step =>
+  return displayedRecipe.value.recipeIngredient.filter((ingredient) => {
+    return !displayedRecipe.value.recipeInstructions.some(step =>
       step.ingredientReferences?.map(ref => ref.referenceId).includes(ingredient.referenceId),
     );
   });
@@ -491,8 +493,73 @@ function chipClicked(item: RecipeTag | RecipeCategory | RecipeTool, itemType: st
 
 const scale = ref(1);
 
-// expose to template
-// (all variables used in template are top-level in <script setup>)
+/** =============================================================
+ * Unit-system conversion (display-time only)
+ *
+ * The toggle (placed in RecipePageScale) lets users view a recipe in metric /
+ * imperial / US-customary. When non-original is chosen, we fetch a converted
+ * view of the recipe's ingredients and instructions from the backend and
+ * substitute them via the `displayedRecipe` computed below — a single
+ * insertion point so cook mode, the print container, and the ingredient list
+ * all see converted values without prop-threading.
+ */
+const unitSystem = ref<UnitSystem>("original");
+const conversion = ref<RecipeConversionResponse | null>(null);
+const conversionCache = new Map<string, RecipeConversionResponse>();
+
+const { resolvedDefault } = useUnitSystem();
+
+// Seed the toggle from the user/household preference once the recipe is loaded.
+invoke(async () => {
+  await until(recipe.value).not.toBeNull();
+  unitSystem.value = resolvedDefault.value;
+});
+
+watch(
+  [unitSystem, () => recipe.value?.slug],
+  async ([system, slug]) => {
+    if (!slug || system === "original" || isEditForm.value) {
+      conversion.value = null;
+      return;
+    }
+    const cacheKey = `${slug}::${system}`;
+    const cached = conversionCache.get(cacheKey);
+    if (cached) {
+      conversion.value = cached;
+      return;
+    }
+    try {
+      const { data } = await api.recipes.getConversions(slug, system);
+      if (data) {
+        conversionCache.set(cacheKey, data);
+        conversion.value = data;
+      }
+    }
+    catch {
+      conversion.value = null;
+    }
+  },
+);
+
+const displayedRecipe = computed<NoUndefinedField<Recipe>>(() => {
+  if (unitSystem.value === "original" || isEditForm.value || conversion.value === null) {
+    return recipe.value;
+  }
+  return {
+    ...recipe.value,
+    recipeIngredient: conversion.value.recipeIngredient ?? recipe.value.recipeIngredient,
+    recipeInstructions: conversion.value.recipeInstructions ?? recipe.value.recipeInstructions,
+  } as NoUndefinedField<Recipe>;
+});
+
+// Writable v-model for instruction steps that reads converted in view mode and writes
+// to the canonical recipe in edit mode (where displayedRecipe === recipe).
+const instructionsVModel = computed<RecipeStep[]>({
+  get: () => displayedRecipe.value.recipeInstructions,
+  set: (v) => {
+    recipe.value.recipeInstructions = v;
+  },
+});
 </script>
 
 <style lang="css">
