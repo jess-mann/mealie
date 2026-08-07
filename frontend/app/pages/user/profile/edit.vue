@@ -197,6 +197,20 @@
             color="primary"
             @change="updateUser"
           />
+          <v-select
+            v-model="userCopy.preferredUnitSystem"
+            :prepend-icon="$globals.icons.units"
+            :items="options"
+            item-title="label"
+            item-value="value"
+            :label="$t('user.preferred-unit-system')"
+            :hint="$t('user.preferred-unit-system-description')"
+            persistent-hint
+            clearable
+            density="comfortable"
+            variant="underlined"
+            @update:model-value="updateUser"
+          />
         </v-card-text>
       </v-card>
       <nuxt-link
@@ -228,12 +242,14 @@ import UserAvatar from "~/components/Domain/User/UserAvatar.vue";
 import UserPasswordStrength from "~/components/Domain/User/UserPasswordStrength.vue";
 import { validators } from "~/composables/use-validators";
 import { useUserActivityPreferences } from "~/composables/use-users/preferences";
+import { useUnitSystem } from "~/composables/recipes/use-unit-system";
 import useDefaultActivity from "~/composables/use-default-activity";
 import { ActivityKey } from "~/lib/api/types/activity";
 import type { UserBase } from "~/lib/api/types/user";
 
 const i18n = useI18n();
 const auth = useMealieAuth();
+const { options } = useUnitSystem();
 const { getDefaultActivityLabels, getActivityLabel, getActivityKey } = useDefaultActivity();
 const user = computed(() => auth.user.value);
 

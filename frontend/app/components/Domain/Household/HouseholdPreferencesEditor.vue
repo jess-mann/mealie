@@ -42,6 +42,19 @@
       variant="underlined"
       flat
     />
+    <v-select
+      v-model="local.defaultUnitSystem"
+      :prepend-icon="$globals.icons.units"
+      :items="options"
+      item-title="label"
+      item-value="value"
+      :label="$t('household.default-unit-system')"
+      variant="underlined"
+      flat
+    />
+    <p class="ml-8 text-subtitle-2 my-0 py-0">
+      {{ $t("household.default-unit-system-description") }}
+    </p>
 
     <BaseCardSectionTitle class="mt-5" :title="$t('household.household-recipe-preferences')">
       {{ $t("household.default-recipe-preferences-description") }}
@@ -58,6 +71,7 @@
 </template>
 
 <script setup lang="ts">
+import { useUnitSystem } from "~/composables/recipes/use-unit-system";
 import type { ReadHouseholdPreferences } from "~/lib/api/types/household";
 
 const preferences = defineModel<ReadHouseholdPreferences>({ required: true });
@@ -66,6 +80,7 @@ watch(local, (newVal) => { preferences.value = { ...newVal }; });
 watch(preferences, (newVal) => { if (newVal) Object.assign(local, newVal); });
 
 const i18n = useI18n();
+const { options } = useUnitSystem();
 
 type Preference = {
   key: keyof ReadHouseholdPreferences;
