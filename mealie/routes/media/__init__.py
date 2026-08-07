@@ -3,11 +3,12 @@ from fastapi.responses import FileResponse
 
 from mealie.core.config import get_app_dirs
 
-from . import media_recipe, media_user
+from . import media_receipt, media_recipe, media_user
 
 media_router = APIRouter(prefix="/api/media", tags=["Recipe: Images and Assets"])
 
 media_router.include_router(media_recipe.router)
+media_router.include_router(media_receipt.router)
 media_router.include_router(media_user.router)
 
 

@@ -287,6 +287,11 @@ tasks:
     cmds:
       - yarn run dev --no-fork
 
+  dev:hot:
+    desc: runs backend and frontend dev servers with hot reload
+    cmds:
+      - ./dev/hot-reload.sh
+
   docker:build-from-package:
     desc: Builds the Docker image from the existing Python package in dist/
     deps:

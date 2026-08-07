@@ -16,7 +16,9 @@ from mealie.db.models.household.household import Household
 from mealie.db.models.household.household_to_recipe import HouseholdToRecipe
 from mealie.db.models.household.invite_tokens import GroupInviteToken
 from mealie.db.models.household.mealplan import GroupMealPlan, GroupMealPlanRules
+from mealie.db.models.household.pantry import PantryItem
 from mealie.db.models.household.preferences import HouseholdPreferencesModel
+from mealie.db.models.household.receipt import Receipt
 from mealie.db.models.household.recipe_action import GroupRecipeAction
 from mealie.db.models.household.shopping_list import (
     ShoppingList,
@@ -60,6 +62,8 @@ from mealie.schema.household.group_shopping_list import (
 from mealie.schema.household.household import HouseholdInDB, HouseholdRecipeOut
 from mealie.schema.household.household_preferences import ReadHouseholdPreferences
 from mealie.schema.household.invite_token import ReadInviteToken
+from mealie.schema.household.pantry import PantryItemOut
+from mealie.schema.household.receipt import ReceiptOut
 from mealie.schema.household.webhook import ReadWebhook
 from mealie.schema.labels import MultiPurposeLabelOut
 from mealie.schema.meal_plan.new_meal import ReadPlanEntry
@@ -287,6 +291,28 @@ class AllRepositories:
             PK_ID,
             GroupRecipeAction,
             GroupRecipeActionOut,
+            group_id=self.group_id,
+            household_id=self.household_id,
+        )
+
+    @cached_property
+    def pantry_items(self) -> HouseholdRepositoryGeneric[PantryItemOut, PantryItem]:
+        return HouseholdRepositoryGeneric(
+            self.session,
+            PK_ID,
+            PantryItem,
+            PantryItemOut,
+            group_id=self.group_id,
+            household_id=self.household_id,
+        )
+
+    @cached_property
+    def receipts(self) -> HouseholdRepositoryGeneric[ReceiptOut, Receipt]:
+        return HouseholdRepositoryGeneric(
+            self.session,
+            PK_ID,
+            Receipt,
+            ReceiptOut,
             group_id=self.group_id,
             household_id=self.household_id,
         )

@@ -119,6 +119,7 @@ RUN . $VENV_PATH/bin/activate \
 FROM python-base AS production
 ENV PRODUCTION=true
 ENV TESTING=false
+ENV HOME=/app/data
 
 ARG COMMIT
 ENV GIT_COMMIT_HASH=$COMMIT
