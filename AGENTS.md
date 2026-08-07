@@ -60,56 +60,54 @@ Use 8GiB if PaddleOCR remains memory-sensitive and the Mac is not under other he
 
 Changing Colima memory restarts Docker and temporarily stops the app, but it should not affect the bind-mounted Mealie data directory.
 
-## Build The Image
+## Local Build And Run
 
-Build the current fork:
+Use the local script as the single entrypoint for production-like Docker testing:
 
 ```bash
-docker build -f docker/Dockerfile \
-  --build-arg COMMIT=$(git rev-parse HEAD) \
-  -t jess-mealie:pantry .
+dev/scripts/local-mealie up
 ```
 
-This can be slow because the image includes large Python/PaddleOCR/OpenCV dependencies.
+The script uses `docker compose`, enables BuildKit, builds `jess-mealie:pantry`, stamps the image with git commit/branch/build-date/version metadata, and recreates the `mealie` container against the bind-mounted `data` directory.
 
-Always rebuild after changing branches when testing branch isolation. The tag `jess-mealie:pantry` is mutable and may still point to an image built from another branch.
+This can be slow because the image includes large Python/PaddleOCR/OpenCV dependencies. The Dockerfile uses BuildKit cache mounts for Yarn, pip, uv, and apt downloads.
+
+Prefer this compose-backed script over raw `docker build`, `docker run`, or `docker start` when branch correctness matters. `docker start mealie` only restarts the existing named container and can resurrect a stale image from another branch, even if the source checkout is now correct.
+
+Useful commands:
+
+```bash
+dev/scripts/local-mealie build
+dev/scripts/local-mealie up
+dev/scripts/local-mealie restart
+dev/scripts/local-mealie status
+dev/scripts/local-mealie logs
+dev/scripts/local-mealie stop
+dev/scripts/local-mealie down
+```
+
+Always rebuild after changing branches when testing branch isolation. The tag `jess-mealie:pantry` is mutable and may still point to an image built from another branch unless the compose workflow rebuilds it.
 
 Useful preflight before starting:
 
 ```bash
 git status --short --branch
 git log --oneline -1
-docker image inspect jess-mealie:pantry --format 'image={{.Id}} created={{.Created}}'
+docker image inspect jess-mealie:pantry --format 'image={{.Id}} created={{.Created}} revision={{index .Config.Labels "org.opencontainers.image.revision"}} branch={{index .Config.Labels "org.opencontainers.image.ref.name"}} version={{index .Config.Labels "org.opencontainers.image.version"}}'
 ```
 
 ## Start Mealie
 
-Do not use `docker start mealie` when branch correctness matters. That only restarts the existing named container and can resurrect a stale image from another branch, even if the source checkout is now correct.
-
 Start the production-like local container:
 
 ```bash
-docker rm -f mealie 2>/dev/null || true
-docker run -d \
-  --name mealie \
-  --restart unless-stopped \
-  -p 9925:9000 \
-  -v /Users/jessmann/Documents/jess-mealie/data:/app/data \
-  -e ALLOW_SIGNUP=false \
-  -e PUID=501 \
-  -e PGID=20 \
-  -e TZ=America/New_York \
-  -e BASE_URL=http://localhost:9925 \
-  -e DEFAULT_GROUP=Home \
-  -e DEFAULT_HOUSEHOLD=Family \
-  -e DB_ENGINE=sqlite \
-  jess-mealie:pantry
+dev/scripts/local-mealie up
 ```
 
 Check health:
 
 ```bash
-docker ps
+dev/scripts/local-mealie status
 docker inspect -f '{{.State.Health.Status}}' mealie
 ```
 
@@ -132,13 +130,13 @@ Tailscale Serve has been configured to proxy the no-port HTTPS URL to `http://lo
 Stop the running container:
 
 ```bash
-docker stop mealie
+dev/scripts/local-mealie stop
 ```
 
-Remove the stopped container before recreating it:
+Remove the stopped container and compose network:
 
 ```bash
-docker rm mealie
+dev/scripts/local-mealie down
 ```
 
 ## Restart After Rebuild
@@ -146,18 +144,7 @@ docker rm mealie
 After rebuilding `jess-mealie:pantry`, recreate the container with the same data mount:
 
 ```bash
-docker rm -f mealie 2>/dev/null || true
-docker run -d --name mealie --restart unless-stopped -p 9925:9000 \
-  -v /Users/jessmann/Documents/jess-mealie/data:/app/data \
-  -e ALLOW_SIGNUP=false \
-  -e PUID=501 \
-  -e PGID=20 \
-  -e TZ=America/New_York \
-  -e BASE_URL=http://localhost:9925 \
-  -e DEFAULT_GROUP=Home \
-  -e DEFAULT_HOUSEHOLD=Family \
-  -e DB_ENGINE=sqlite \
-  jess-mealie:pantry
+dev/scripts/local-mealie up
 ```
 
 After restart, verify the container is healthy and check which image it is using:

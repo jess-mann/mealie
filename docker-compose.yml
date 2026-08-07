@@ -1,0 +1,31 @@
+services:
+  mealie:
+    image: "${MEALIE_IMAGE:-jess-mealie:pantry}"
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: production
+      args:
+        COMMIT: "${MEALIE_GIT_COMMIT:-unknown}"
+        GIT_BRANCH: "${MEALIE_GIT_BRANCH:-unknown}"
+        BUILD_DATE: "${MEALIE_BUILD_DATE:-unknown}"
+        VERSION: "${MEALIE_IMAGE_VERSION:-local}"
+    container_name: mealie
+    restart: unless-stopped
+    ports:
+      - "${MEALIE_HOST_PORT:-9925}:9000"
+    deploy:
+      resources:
+        limits:
+          memory: 1000M
+    volumes:
+      - ./data:/app/data
+    environment:
+      ALLOW_SIGNUP: "${ALLOW_SIGNUP:-false}"
+      PUID: "${PUID:-501}"
+      PGID: "${PGID:-20}"
+      TZ: "${TZ:-America/New_York}"
+      BASE_URL: "${BASE_URL:-http://localhost:9925}"
+      DEFAULT_GROUP: "${DEFAULT_GROUP:-Home}"
+      DEFAULT_HOUSEHOLD: "${DEFAULT_HOUSEHOLD:-Family}"
+      DB_ENGINE: "${DB_ENGINE:-sqlite}"
