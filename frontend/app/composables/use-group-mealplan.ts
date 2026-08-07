@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { useAsyncKey } from "./use-utils";
 import { useUserApi } from "~/composables/api";
-import type { CreatePlanEntry, PlanEntryType, UpdatePlanEntry } from "~/lib/api/types/meal-plan";
+import type { CreatePlanEntry, PlanEntryType, ReadPlanEntry, RecipeSummary, UpdatePlanEntry } from "~/lib/api/types/meal-plan";
 
 type PlanOption = {
   text: string;
@@ -28,6 +28,34 @@ export function getEntryTypeText(value: PlanEntryType) {
 export interface DateRange {
   start: Date;
   end: Date;
+}
+export type DaySection = {
+  title: string;
+  meals: ReadPlanEntry[];
+};
+
+export type Days = {
+  date: Date;
+  sections: DaySection[];
+  recipes: RecipeSummary[];
+};
+
+export type MealsByDate = {
+  date: Date;
+  meals: ReadPlanEntry[];
+};
+
+export interface Meal {
+  date: Date;
+  title: string;
+  text: string;
+  recipeId?: string;
+  entryType: PlanEntryType;
+  existing: boolean;
+  id: number;
+  groupId: string;
+  userId: string;
+  note: boolean;
 }
 
 export const useMealplans = function (range: Ref<DateRange>) {
@@ -113,3 +141,62 @@ export const useMealplans = function (range: Ref<DateRange>) {
 
   return { mealplans, actions, validForm, loading };
 };
+
+export function useMealplanDialog() {
+  const auth = useMealieAuth();
+  const newMeal = ref<Meal>({
+    date: new Date(),
+    title: "",
+    text: "",
+    entryType: "dinner" as PlanEntryType,
+    existing: false,
+    id: 0,
+    groupId: "",
+    userId: auth.user.value?.id || "",
+    note: false,
+  });
+  const open = ref(false);
+
+  function editMeal(mealplan: ReadPlanEntry) {
+    const { date, title, text, entryType, recipeId, id, groupId } = mealplan;
+    if (!entryType) return;
+
+    const [year, month, day] = date.split("-").map(Number);
+    newMeal.value.date = new Date(year!, month! - 1, day);
+    newMeal.value.title = title || "";
+    newMeal.value.text = text || "";
+    newMeal.value.recipeId = recipeId || undefined;
+    newMeal.value.entryType = entryType;
+    newMeal.value.existing = true;
+    newMeal.value.id = id;
+    newMeal.value.groupId = groupId;
+    newMeal.value.note = !recipeId;
+
+    open.value = true;
+  }
+
+  function openDialog() {
+    open.value = true;
+  }
+
+  function resetDialog() {
+    newMeal.value.date = new Date();
+    newMeal.value.title = "";
+    newMeal.value.text = "";
+    newMeal.value.entryType = "dinner";
+    newMeal.value.recipeId = undefined;
+    newMeal.value.existing = false;
+    newMeal.value.note = false;
+  }
+
+  return {
+    // --- State ---
+    open,
+    newMeal,
+
+    // --- Actions ---
+    editMeal,
+    openDialog,
+    resetDialog,
+  };
+}
